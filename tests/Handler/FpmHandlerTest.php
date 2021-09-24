@@ -115,7 +115,7 @@ class FpmHandlerTest extends TestCase implements HttpRequestProxyTest
         ]);
     }
 
-    public function test request with encoded data()
+    public function test request with with encoded data()
     {
         $event = [
             'version' => '2.0',
@@ -137,7 +137,7 @@ class FpmHandlerTest extends TestCase implements HttpRequestProxyTest
             '$_FILES' => [],
             '$_COOKIE' => [],
             '$_REQUEST' => [
-                'a' => '<==  foo bar  ==>',
+                'a' => '<== foo bar ==>',
                 'b' => '###Hello World###',
             ],
             '$_SERVER' => [
@@ -155,7 +155,7 @@ class FpmHandlerTest extends TestCase implements HttpRequestProxyTest
         ]);
     }
 
-    public function test request with single quotes()
+    public function test request with with single quotes()
     {
         $event = [
             'version' => '2.0',
@@ -195,7 +195,7 @@ class FpmHandlerTest extends TestCase implements HttpRequestProxyTest
         ]);
     }
 
-    public function test request with backslash characters()
+    public function test request with with backslash characters()
     {
         $event = [
             'version' => '2.0',
@@ -232,7 +232,7 @@ class FpmHandlerTest extends TestCase implements HttpRequestProxyTest
         ]);
     }
 
-    public function test request with null characters()
+    public function test request with with null characters()
     {
         $event = [
             'version' => '2.0',
@@ -269,7 +269,7 @@ class FpmHandlerTest extends TestCase implements HttpRequestProxyTest
         ]);
     }
 
-    public function test request with badly formed string()
+    public function test request with with badly formed string()
     {
         $event = [
             'version' => '2.0',
@@ -299,11 +299,11 @@ class FpmHandlerTest extends TestCase implements HttpRequestProxyTest
                 ],
             ],
             '$_SERVER' => [
-                'REQUEST_URI' => '/hello?arr%5B1=sid&arr%5B4%5D=fred',
+                'REQUEST_URI' => '/hello?arr%5B1=sid&arr%5B4%5D%5B2=fred',
                 'PHP_SELF' => '/hello',
                 'PATH_INFO' => '/hello',
                 'REQUEST_METHOD' => 'GET',
-                'QUERY_STRING' => 'arr%5B1=sid&arr%5B4%5D=fred',
+                'QUERY_STRING' => 'arr%5B1=sid&arr%5B4%5D%5B2=fred',
                 'CONTENT_LENGTH' => '0',
                 'CONTENT_TYPE' => 'application/x-www-form-urlencoded',
                 'LAMBDA_INVOCATION_CONTEXT' => json_encode($this->fakeContext),
