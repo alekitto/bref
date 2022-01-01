@@ -28,13 +28,17 @@ final class Psr7Bridge
         $server = [
             'SERVER_PROTOCOL' => $event->getProtocolVersion(),
             'REQUEST_METHOD' => $event->getMethod(),
-            'REQUEST_TIME' => time(),
-            'REQUEST_TIME_FLOAT' => microtime(true),
+            'REQUEST_TIME' => $event->getRequestContext()['requestTimeEpoch'] ?? time(),
+            'REQUEST_TIME_FLOAT' => (float) ($event->getRequestContext()['requestTimeEpoch'] ?? microtime(true)),
             'QUERY_STRING' => $event->getQueryString(),
             'DOCUMENT_ROOT' => getcwd(),
             'REQUEST_URI' => $event->getUri(),
             'REMOTE_ADDR' => $event->getSourceIp(),
         ];
+
+        if (isset($event->getRequestContext()['identity']['sourceIp'])) {
+            $server['REMOTE_ADDR'] = $event->getRequestContext()['identity']['sourceIp'];
+        }
 
         $headers = $event->getHeaders();
         if (isset($headers['Host'])) {

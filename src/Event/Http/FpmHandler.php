@@ -218,7 +218,7 @@ final class FpmHandler extends HttpHandler
     {
         $request = new FastCgiRequest($event->getMethod(), $this->handler, $event->getBody());
         $request->setRequestUri($event->getUri());
-        $request->setRemoteAddress('127.0.0.1');
+        $request->setRemoteAddress($event->getRequestContext()['identity']['sourceIp'] ?? '127.0.0.1');
         $request->setRemotePort($event->getRemotePort());
         $request->setServerAddress('127.0.0.1');
         $request->setServerName($event->getServerName());
