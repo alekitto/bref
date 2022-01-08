@@ -15,6 +15,9 @@ use Bref\Event\LambdaEvent;
  */
 final class HttpRequestEvent implements LambdaEvent
 {
+    private const PAYLOAD_VERSION_1_0 = 1;
+    private const PAYLOAD_VERSION_2_0 = 2;
+
     /** @var array */
     private $event;
     /** @var string */
@@ -23,7 +26,7 @@ final class HttpRequestEvent implements LambdaEvent
     private $headers;
     /** @var string */
     private $queryString;
-    /** @var float */
+    /** @var int */
     private $payloadVersion;
 
     /**
@@ -41,7 +44,7 @@ final class HttpRequestEvent implements LambdaEvent
             throw new InvalidLambdaEvent('API Gateway or ALB', $event);
         }
 
-        $this->payloadVersion = (float) ($event['version'] ?? '1.0');
+        $this->payloadVersion = ($event['version'] ?? '1.0') === '1.0' ? self::PAYLOAD_VERSION_1_0 : self::PAYLOAD_VERSION_2_0;
         $this->event = $event;
         $this->queryString = $this->rebuildQueryString();
         $this->headers = $this->extractHeaders();
@@ -58,6 +61,7 @@ final class HttpRequestEvent implements LambdaEvent
         if ($this->event['isBase64Encoded'] ?? false) {
             $requestBody = base64_decode($requestBody);
         }
+
         return $requestBody;
     }
 
@@ -87,7 +91,7 @@ final class HttpRequestEvent implements LambdaEvent
 
     public function getProtocolVersion(): string
     {
-        return ltrim($this->getProtocol(), 'HTTP/');
+        return explode('/', $this->getProtocol(), 2)[1] ?? '';
     }
 
     public function getContentType(): ?string
@@ -204,7 +208,7 @@ final class HttpRequestEvent implements LambdaEvent
         if ($this->isFormatV2()) {
             // We re-parse the query string to make sure it is URL-encoded
             // Why? To match the format we get when using PHP outside of Lambda (we get the query string URL-encoded)
-            $queryParameters = $this->queryStringToArray($this->event['rawQueryString'] ?? '');
+            $queryParameters = self::queryStringToArray($this->event['rawQueryString'] ?? '');
             return http_build_query($queryParameters);
         }
 
@@ -246,7 +250,7 @@ final class HttpRequestEvent implements LambdaEvent
             // parse_str will automatically `urldecode` any value that needs decoding. This will allow parameters
             // like `?my_param[bref][]=first&my_param[bref][]=second` to properly work. `$decodedQueryParameters`
             // will be an array with parameter names as keys.
-            $decodedQueryParameters = $this->queryStringToArray($queryString);
+            $decodedQueryParameters = self::queryStringToArray($queryString);
 
             return http_build_query($decodedQueryParameters);
         }
@@ -262,7 +266,7 @@ final class HttpRequestEvent implements LambdaEvent
 
             // re-parse the query-string so it matches the format used when using PHP outside of Lambda
             // this is particularly important when using multi-value params - eg. myvar[]=2&myvar=3 ... = [2, 3]
-            $queryParameters = $this->queryStringToArray(implode('&', $queryParameterStr));
+            $queryParameters = self::queryStringToArray(implode('&', $queryParameterStr));
             return http_build_query($queryParameters);
         }
 
@@ -273,7 +277,7 @@ final class HttpRequestEvent implements LambdaEvent
         /*
          * Watch out: do not use $event['queryStringParameters'] directly!
          *
-         * (that is no longer the case here but it was in the past with Bref 0.2)
+         * (that is no longer the case here, but it was in the past with Bref 0.2)
          *
          * queryStringParameters does not handle correctly arrays in parameters
          * ?array[key]=value gives ['array[key]' => 'value'] while we want ['array' => ['key' = > 'value']]
@@ -290,7 +294,7 @@ final class HttpRequestEvent implements LambdaEvent
         } else {
             $headers = $this->event['headers'] ?? [];
             // Turn the headers array into a multi-value array to simplify the code below
-            $headers = array_map(function ($value): array {
+            $headers = array_map(static function ($value): array {
                 return [$value];
             }, $headers);
         }
@@ -323,12 +327,17 @@ final class HttpRequestEvent implements LambdaEvent
      */
     public function isFormatV2(): bool
     {
-        return $this->payloadVersion === 2.0;
+        return $this->payloadVersion === self::PAYLOAD_VERSION_2_0;
     }
 
-    private function queryStringToArray(string $queryString): array
+    public static function queryStringToArray(string $queryString): array
     {
-        $queryString = preg_replace('/^[?#&]/', '', trim($queryString));
+        $queryString = trim($queryString);
+        $firstChar = $queryString[0] ?? '';
+        if ($firstChar === '?' || $firstChar === '#' || $firstChar === '&') {
+            $queryString = substr($queryString, 1);
+        }
+
         if (empty($queryString)) {
             return [];
         }
